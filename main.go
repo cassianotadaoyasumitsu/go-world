@@ -15,7 +15,8 @@ func main() {
 }
 
 func initializeDB() *pgx.Conn {
-	connUrl := "postgres://cty:password@localhost:5432/goworlddb"
+	connUrl := "postgres://xpjczzaqerighx:e0291b716ea919b11e07c2de123a3164306e2cb0c721801d9b037404c620d39a@ec2-35-168-80-116.compute-1.amazonaws.com:5432/dcgmgicspgnus3"
+	// connUrl := "postgres://cty:password@localhost:5432/goworlddb"
 	conn, err := pgx.Connect(context.Background(), connUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
