@@ -1,39 +1,93 @@
 package main
 
 import (
-	"html/template"
-	"log"
+	"context"
+	"fmt"
 	"net/http"
+	"os"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v4"
 )
 
-type User struct {
-	ID        int    `json:"id"`
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-	Email     string `email:"email"`
-}
-
 func main() {
-	http.HandleFunc("/", index_page)
-	http.HandleFunc("/hotels/", hotels_page)
-	http.HandleFunc("/contacts/", contact_page)
-
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
-
-	// start the server
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	runGinRouter()
 }
 
-func index_page(w http.ResponseWriter, r *http.Request) {
+func initializeDB() *pgx.Conn {
+	connUrl := "postgres://cty:password@localhost:5432/goworlddb"
+	conn, err := pgx.Connect(context.Background(), connUrl)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	return conn
+}
+
+func runGinRouter() {
 	user := User{ID: 0, FirstName: "Cassiano", LastName: "Yasumitsu", Email: "cassiano@email.com"}
-	tmpl, _ := template.ParseFiles("templates/index.html")
-	tmpl.Execute(w, user)
-}
 
-func hotels_page(w http.ResponseWriter, r *http.Request) {
+	router := gin.Default()
+	router.LoadHTMLGlob("templates/*")
+	router.Static("static/", "./static")
 
-}
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(
+			http.StatusOK,
+			"index.html",
+			gin.H{"title": "GoWorld - Main Page", "payload": user},
+		)
+	})
+	router.GET("/index", func(c *gin.Context) {
+		c.HTML(
+			http.StatusOK,
+			"index.html",
+			gin.H{"title": "GoWorld - Main Page", "payload": user},
+		)
+	})
+	router.GET("/hotels", func(c *gin.Context) {
+		conn := initializeDB()
+		defer conn.Close(context.Background())
 
-func contact_page(w http.ResponseWriter, r *http.Request) {
+		var allHotels []Hotel
+		if rows, err := conn.Query(context.Background(), "SELECT id, country, destination, hotel FROM hotels"); err != nil {
+			fmt.Println("Unabel to get list of hotels due to: ", err)
+		} else {
+			// deferring query closing
+			defer rows.Close()
 
+			// Using tmp variable for reading
+			var hotel Hotel
+
+			// Next prepares the next row for reading.
+			for rows.Next() {
+				// Scan reads the values from the current row into tmp
+				rows.Scan(&hotel.ID, &hotel.Country, &hotel.Destination, &hotel.Name)
+				allHotels = append(allHotels, hotel)
+			}
+		}
+
+		c.HTML(
+			http.StatusOK,
+			"hotels.html",
+			gin.H{"title": "GoWorld - Hotels", "payload": user, "hotels": allHotels, "menuHotels": true},
+		)
+	})
+	router.GET("/contact", func(c *gin.Context) {
+		c.HTML(
+			http.StatusOK,
+			"contact.html",
+			gin.H{"title": "GoWorld - Main Page"},
+		)
+	})
+
+	// api routes
+	v1 := router.Group("/v1/hotels")
+	{
+		v1.POST("/", createHotel)
+		v1.GET("/", getAllHotels)
+		v1.GET("/:id", getHotelByID)
+	}
+
+	router.Run()
 }

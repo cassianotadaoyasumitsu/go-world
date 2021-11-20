@@ -1,0 +1,30 @@
+{{template "header.html" .}}
+
+    <h1>Hotels</h1>
+
+    {{range .hotels}}
+      <div class="card">
+        <div class="card-header"></div>
+        <div class="col-md-8">
+          <div class="row g-0">
+            <div class="col-md-2">
+              <svg width="150" height="150" viewBox="0 0 150 150" fill="#bbbbdd" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="10" width="130" height="130" />
+              </svg>
+            </div>
+            <div class="col-md-10">
+              <div class="card-body">
+                <h5 class="card-title">{{ .Name }}</h5>
+                <p class="card-text">{{ .Country }}/{{ .Destination }}</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookModal">Book
+                  Now</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {{end}}
+
+    {{template "footer.html" .}}
+
+
